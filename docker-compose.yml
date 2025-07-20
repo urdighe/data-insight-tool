@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
+    container_name: data-insight-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: data_insights
+      POSTGRES_USER: insight_user
+      POSTGRES_PASSWORD: insight_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./docker/postgres/setup.sh:/docker-entrypoint-initdb.d/setup.sh
+    networks:
+      - data-insight-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U insight_user -d data_insights"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

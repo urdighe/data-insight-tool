@@ -1,0 +1,13 @@
+# Use the official PostgreSQL image as base
+FROM postgres:15-alpine
+
+# Set environment variables for PostgreSQL
+ENV POSTGRES_DB=data_insights
+ENV POSTGRES_USER=insight_user
+ENV POSTGRES_PASSWORD=insight_password
+
+# Expose PostgreSQL port
+EXPOSE 5432
+
+# Set default command
+CMD ["postgres"] 
