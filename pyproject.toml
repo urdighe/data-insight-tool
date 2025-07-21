@@ -1,0 +1,9 @@
+[project]
+name = "data-insight-tool"
+version = "0.1.0"
+description = "Data insight tool with PostgreSQL MCP server"
+requires-python = ">=3.10.6"
+dependencies = [
+    "psycopg2-binary>=2.9.0",
+    "fastmcp>=0.1.0",
+]
