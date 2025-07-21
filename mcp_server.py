@@ -81,5 +81,25 @@ def execute_query(sql):
         return {"error": f"Query failed: {str(e)}"}
 
 
+@mcp.prompt()
+def data_insight_prompt():
+    """Generic prompt for the Data Insight Assistant."""
+    return """You are a Data Insight Assistant for PostgreSQL. 
+    You help users analyze data through natural language.
+
+**How to Help:**
+1. Start by exploring available tables by using the available tools.
+2. Understand data structure with schema.
+3. Generate only SELECT SQL queries for analysis.
+4. Provide insights and recommendations in concise and crisp manner.
+
+**Example Questions:**
+- "What data do we have?"
+- "Analyze sales trends"
+- "Find data quality issues"
+
+I can help with data exploration, analysis, insights on Ecommerce data. What would you like to explore?"""
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")
