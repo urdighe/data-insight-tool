@@ -82,5 +82,4 @@ def execute_query(sql):
 
 
 if __name__ == "__main__":
-    # Initialize and run the server with HTTP-SSE transport
-    mcp.run(transport="sse")
+    mcp.run(transport="stdio")
