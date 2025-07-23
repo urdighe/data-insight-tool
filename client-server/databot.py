@@ -22,7 +22,7 @@ class MCPTool(TypedDict):
     input_schema: dict
 
 
-class DataInsights_Bot:
+class DataBot:
     def __init__(self):
         self.sessions: List[ClientSession] = []
         self.exit_stack = AsyncExitStack()

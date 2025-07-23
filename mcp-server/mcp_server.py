@@ -3,7 +3,6 @@
 MCP Server for PostgreSQL
 """
 
-import psycopg2
 from psycopg2.extras import RealDictCursor
 from mcp.server.fastmcp import FastMCP
 from psycopg2 import pool
