@@ -1,12 +1,17 @@
 from dotenv import load_dotenv
 from anthropic import Anthropic
-from mcp import ClientSession, StdioServerParameters, types
+from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from typing import List, Dict, TypedDict
 from contextlib import AsyncExitStack
 import json
-import asyncio
 import os
+import logging
+
+
+MODEL = "claude-3-7-sonnet-20250219"
+MAX_TOKENS = 2024
+
 
 load_dotenv()
 
@@ -17,8 +22,7 @@ class MCPTool(TypedDict):
     input_schema: dict
 
 
-class DataInsights_Bot:
-
+class DataBot:
     def __init__(self):
         self.sessions: List[ClientSession] = []
         self.exit_stack = AsyncExitStack()
@@ -40,12 +44,13 @@ class DataInsights_Bot:
             await session.initialize()
             self.sessions.append(session)
 
-            # List available tools for this session
             response = await session.list_tools()
             tools = response.tools
-            print(f"\nConnected to {server_name} with tools:", [t.name for t in tools])
+            logging.info(
+                f"\nConnected to {server_name} with tools:", [t.name for t in tools]
+            )
 
-            for tool in tools:  # new
+            for tool in tools:
                 self.tool_to_session[tool.name] = session
                 self.available_tools.append(
                     {
@@ -55,9 +60,9 @@ class DataInsights_Bot:
                     }
                 )
         except Exception as e:
-            print(f"Failed to connect to {server_name}: {e}")
+            logging.error(f"Failed to connect to {server_name}: {e}")
 
-    async def connect_to_servers(self):  # new
+    async def connect_to_servers(self):
         """Connect to all configured MCP servers."""
         try:
             with open("server_config.json", "r") as file:
@@ -68,14 +73,14 @@ class DataInsights_Bot:
             for server_name, server_config in servers.items():
                 await self.connect_to_server(server_name, server_config)
         except Exception as e:
-            print(f"Error loading server configuration: {e}")
+            logging.error(f"Error loading server configuration: {e}")
             raise
 
     async def process_query(self, query):
         messages = [{"role": "user", "content": query}]
         response = self.anthropic.messages.create(
-            max_tokens=2024,
-            model="claude-3-7-sonnet-20250219",
+            max_tokens=MAX_TOKENS,
+            model=MODEL,
             tools=self.available_tools,
             messages=messages,
         )
@@ -84,7 +89,7 @@ class DataInsights_Bot:
             assistant_content = []
             for content in response.content:
                 if content.type == "text":
-                    print(content.text)
+                    logging.info(content.text)
                     assistant_content.append(content)
                     if len(response.content) == 1:
                         process_query = False
@@ -95,7 +100,7 @@ class DataInsights_Bot:
                     tool_args = content.input
                     tool_name = content.name
 
-                    print(f"Calling tool {tool_name} with args {tool_args}")
+                    logging.info(f"Calling tool {tool_name} with args {tool_args}")
 
                     session = self.tool_to_session[tool_name]
                     result = await session.call_tool(tool_name, arguments=tool_args)
@@ -112,8 +117,8 @@ class DataInsights_Bot:
                         }
                     )
                     response = self.anthropic.messages.create(
-                        max_tokens=2024,
-                        model="claude-3-7-sonnet-20250219",
+                        max_tokens=MAX_TOKENS,
+                        model=MODEL,
                         tools=self.available_tools,
                         messages=messages,
                     )
@@ -122,40 +127,9 @@ class DataInsights_Bot:
                         len(response.content) == 1
                         and response.content[0].type == "text"
                     ):
-                        print(response.content[0].text)
+                        logging.info(response.content[0].text)
                         process_query = False
 
-    async def chat_loop(self):
-        """Run an interactive chat loop"""
-        print("\nData Insights Bot Started!")
-        print("Type 'quit' to exit.")
-
-        while True:
-            try:
-                query = input("\nQuery: ").strip()
-
-                if query.lower() == "quit":
-                    break
-
-                await self.process_query(query)
-                print("\n")
-
-            except Exception as e:
-                print(f"\nError: {str(e)}")
-
-    async def cleanup(self):  # new
+    async def cleanup(self):
         """Cleanly close all resources using AsyncExitStack."""
         await self.exit_stack.aclose()
-
-
-async def main():
-    chatbot = DataInsights_Bot()
-    try:
-        await chatbot.connect_to_servers()
-        await chatbot.chat_loop()
-    finally:
-        await chatbot.cleanup()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
