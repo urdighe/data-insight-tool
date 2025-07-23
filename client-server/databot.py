@@ -1,3 +1,4 @@
+import re
 from dotenv import load_dotenv
 from anthropic import Anthropic
 from mcp import ClientSession, StdioServerParameters
@@ -92,7 +93,7 @@ class DataBot:
                     logging.info(content.text)
                     assistant_content.append(content)
                     if len(response.content) == 1:
-                        process_query = False
+                        return response.content[0].text
                 elif content.type == "tool_use":
                     assistant_content.append(content)
                     messages.append({"role": "assistant", "content": assistant_content})
@@ -128,7 +129,8 @@ class DataBot:
                         and response.content[0].type == "text"
                     ):
                         logging.info(response.content[0].text)
-                        process_query = False
+                        return response.content[0].text
+
 
     async def cleanup(self):
         """Cleanly close all resources using AsyncExitStack."""
