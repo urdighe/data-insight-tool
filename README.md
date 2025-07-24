@@ -17,3 +17,11 @@ A powerful Python-based tool for data analysis, visualization, and insights gene
 ## Run MCP Client and Server
 
 `uv run mcp_client.py`
+
+## Start WS server
+
+`uvicorn client_ws_server:app --reload --port 8001`
+
+## Run app
+
+`python -m http.server`
