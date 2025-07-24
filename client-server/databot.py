@@ -8,6 +8,16 @@ from contextlib import AsyncExitStack
 import json
 import os
 import logging
+from phoenix.otel import register
+
+
+tracer_provider = register(
+    project_name="data-insight-tool",
+    endpoint="https://app.phoenix.arize.com/s/utkarshrdighe1997/v1/traces",
+    auto_instrument=True,
+    batch=True,
+)
+tracer = tracer_provider.get_tracer(__name__)
 
 
 MODEL = "claude-3-7-sonnet-20250219"
@@ -77,14 +87,39 @@ class DataBot:
             logging.error(f"Error loading server configuration: {e}")
             raise
 
-    async def process_query(self, query):
-        messages = [{"role": "user", "content": query}]
+    def _create_anthropic_response(self, messages):
         response = self.anthropic.messages.create(
             max_tokens=MAX_TOKENS,
             model=MODEL,
             tools=self.available_tools,
             messages=messages,
         )
+        with tracer.start_span("llm_call", openinference_span_kind="llm") as span:
+            prompt = messages[-1]["content"]
+            completion = response.content[0].text
+            span.set_attribute("llm.input", prompt)
+            span.set_attribute("llm.output", completion)
+
+            prompt_tokens = getattr(response.usage, "input_tokens", None)
+            completion_tokens = getattr(response.usage, "output_tokens", None)
+            total_tokens = (prompt_tokens or 0) + (completion_tokens or 0)
+            span.set_attribute("llm.token_count.prompt", prompt_tokens)
+            span.set_attribute("llm.token_count.completion", completion_tokens)
+            span.set_attribute("llm.token_count.total", total_tokens)
+
+            span.set_attribute("llm.model_name", MODEL)
+            span.set_attribute("llm.provider", "anthropic")
+
+        return response
+
+    @tracer.tool
+    def _call_tool(self, session, tool_name, tool_args):
+        return session.call_tool(tool_name, arguments=tool_args)
+
+    @tracer.chain(name="process_query")
+    async def process_query(self, query):
+        messages = [{"role": "user", "content": query}]
+        response = self._create_anthropic_response(messages)
         process_query = True
         while process_query:
             assistant_content = []
@@ -104,7 +139,7 @@ class DataBot:
                     logging.info(f"Calling tool {tool_name} with args {tool_args}")
 
                     session = self.tool_to_session[tool_name]
-                    result = await session.call_tool(tool_name, arguments=tool_args)
+                    result = await self._call_tool(session, tool_name, tool_args)
                     messages.append(
                         {
                             "role": "user",
@@ -117,12 +152,7 @@ class DataBot:
                             ],
                         }
                     )
-                    response = self.anthropic.messages.create(
-                        max_tokens=MAX_TOKENS,
-                        model=MODEL,
-                        tools=self.available_tools,
-                        messages=messages,
-                    )
+                    response = self._create_anthropic_response(messages)
 
                     if (
                         len(response.content) == 1
@@ -130,7 +160,6 @@ class DataBot:
                     ):
                         logging.info(response.content[0].text)
                         return response.content[0].text
-
 
     async def cleanup(self):
         """Cleanly close all resources using AsyncExitStack."""
