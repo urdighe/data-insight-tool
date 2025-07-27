@@ -13,16 +13,19 @@ document.body.innerHTML = `
     }
     #chat-header {
       width: 100vw;
-      background: none;
+      background: rgba(24,25,26,0.95);
+      backdrop-filter: blur(10px);
       color: #f3f4f6;
-      padding: 32px 0 16px 0;
-      font-size: 2.1em;
-      font-weight: 400;
+      padding: 20px 0 16px 0;
+      font-size: 1.6em;
+      font-weight: 500;
       text-align: left;
-      padding-left: 50px;
-      letter-spacing: 1px;
+      padding-left: 40px;
+      letter-spacing: -0.02em;
       margin-bottom: 0;
       flex-shrink: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      position: relative;
     }
     #chat-container {
       position: absolute;
@@ -75,8 +78,6 @@ document.body.innerHTML = `
       background: #232428;
       color: #f3f4f6;
       border: none;
-      display: flex;
-      align-items: flex-start;
       min-height: 32px;
     }
     .msg-bubble h1, .msg-bubble h2, .msg-bubble h3 {
@@ -155,29 +156,35 @@ document.body.innerHTML = `
       width: 100%;
       margin: 0;
       display: flex;
-      gap: 12px;
       padding: 20px;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
       box-sizing: border-box;
+      position: relative;
     }
+
     #user-input {
-      flex: 1;
-      min-width: 0;
+      width: 100%;
       padding: 16px 20px;
+      padding-right: 60px;
       border-radius: 24px;
-      border: none;
+      border: 1.5px solid transparent;
       font-size: 1em;
       background: #232428;
       color: #f3f4f6;
       outline: none;
-      transition: border 0.2s;
+      transition: border-color 0.2s, height 0.2s;
       box-shadow: 0 1px 4px rgba(0,0,0,0.10);
       font-family: 'Trebuchet MS', sans-serif;
-      margin-right: 12px;
+      box-sizing: border-box;
+      resize: none;
+      overflow: hidden;
+      min-height: 52px;
+      max-height: 200px;
+      line-height: 1.4;
     }
     #user-input:focus {
-      border: 1.5px solid #3a8bfd;
+      border-color: #3a8bfd;
     }
     #send-btn {
       width: 32px;
@@ -193,6 +200,11 @@ document.body.innerHTML = `
       justify-content: center;
       transition: background 0.2s;
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      position: absolute;
+      right: 28px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 10;
     }
     #send-btn:disabled {
       background: #444;
@@ -245,26 +257,33 @@ document.body.innerHTML = `
       width: 100%;
       max-width: 600px;
       display: flex;
-      gap: 12px;
       align-items: center;
+      position: relative;
     }
     #greeting-input {
-      flex: 1;
+      width: 100%;
       padding: 16px 20px;
+      padding-right: 60px;
       border-radius: 24px;
-      border: none;
+      border: 1.5px solid transparent;
       font-size: 1em;
       background: #232428;
       color: #f3f4f6;
       outline: none;
-      transition: border 0.2s;
+      transition: border-color 0.2s, height 0.2s;
       box-shadow: 0 1px 4px rgba(0,0,0,0.10);
       font-family: 'Trebuchet MS', sans-serif;
+      box-sizing: border-box;
+      resize: none;
+      overflow: hidden;
+      min-height: 52px;
+      max-height: 200px;
+      line-height: 1.4;
     }
     #greeting-input:focus {
-      border: 1.5px solid #3a8bfd;
+      border-color: #3a8bfd;
     }
-    #greeting-send-btn {
+        #greeting-send-btn {
       width: 32px;
       height: 32px;
       border-radius: 50%;
@@ -278,6 +297,11 @@ document.body.innerHTML = `
       justify-content: center;
       transition: background 0.2s;
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 10;
     }
     #greeting-send-btn:hover {
       background: #2d7bfd;
@@ -291,22 +315,21 @@ document.body.innerHTML = `
   <div id="chat-container">
     <div id="greeting-container">
       <div id="greeting-message">
-        👋 Welcome! <br>
-        Ask me anything about your data for instant insights.
+         Hello! 👋 Ask me anything about your data
       </div>
       <div id="greeting-input-container">
-        <input id="greeting-input" autocomplete="off" placeholder="Ask anything..." />
+        <textarea id="greeting-input" autocomplete="off" placeholder="Ask anything..." rows="1"></textarea>
         <button id="greeting-send-btn" type="button">&#8594;</button>
       </div>
     </div>
     <div id="chat-history"></div>
   </div>
-  <div id="input-container" class="hidden">
-    <form id="input-row">
-      <input id="user-input" autocomplete="off" placeholder="Ask anything..." />
-              <button id="send-btn" type="submit">&#8594;</button>
-    </form>
-  </div>
+        <div id="input-container" class="hidden">
+        <form id="input-row">
+          <textarea id="user-input" autocomplete="off" placeholder="Ask anything..." rows="1"></textarea>
+          <button id="send-btn" type="submit">&#8594;</button>
+        </form>
+      </div>
 `;
 
 const ws = new WebSocket("ws://localhost:8001/ws");
@@ -411,9 +434,9 @@ function startConversation() {
   greetingContainer.classList.add("hidden");
   inputContainer.classList.remove("hidden");
   
-  // Move reply box to bottom when conversation starts
+  // Move reply box slightly up from bottom when conversation starts
   inputContainer.style.top = "auto";
-  inputContainer.style.bottom = "0";
+  inputContainer.style.bottom = "20px";
   
   // Show chat history with absolute positioning
   chatHistory.style.display = "flex";
@@ -454,8 +477,16 @@ greetingInput.onkeypress = (e) => {
     
     sendMessage(msg);
     greetingInput.value = "";
+    // Reset height after sending
+    greetingInput.style.height = 'auto';
   }
 };
+
+greetingInput.addEventListener('input', function() {
+  this.style.height = 'auto';
+  const newHeight = Math.min(this.scrollHeight, 200);
+  this.style.height = newHeight + 'px';
+});
 
 // Main input handlers
 inputRow.onsubmit = (e) => {
@@ -475,8 +506,16 @@ userInput.onkeypress = (e) => {
     
     sendMessage(msg);
     userInput.value = "";
+    // Reset height after sending
+    userInput.style.height = 'auto';
   }
 };
+
+userInput.addEventListener('input', function() {
+  this.style.height = 'auto';
+  const newHeight = Math.min(this.scrollHeight, 200);
+  this.style.height = newHeight + 'px';
+});
 
 ws.onopen = () => {
   // Don't show initial message until conversation starts
