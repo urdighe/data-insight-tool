@@ -96,9 +96,15 @@ class DataBot:
         )
         with tracer.start_span("llm_call", openinference_span_kind="llm") as span:
             prompt = messages[-1]["content"]
-            completion = response.content[0].text
-            span.set_attribute("llm.input", prompt)
-            span.set_attribute("llm.output", completion)
+            completion = response.content[0]
+
+            if completion.type == "text":
+                span.set_attribute("llm.input", prompt)
+                span.set_attribute("llm.output", completion.text)
+            elif completion.type == "tool_use":
+                span.set_attribute("llm.output", f"Tool call: {completion.name}")
+                span.set_attribute("llm.tool_name", completion.name)
+                span.set_attribute("llm.tool_args", str(completion.input))
 
             prompt_tokens = getattr(response.usage, "input_tokens", None)
             completion_tokens = getattr(response.usage, "output_tokens", None)

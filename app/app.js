@@ -221,7 +221,7 @@ inputRow.onsubmit = (e) => {
 };
 
 ws.onopen = () => {
-  addMessage("Hello! 😊\nHow can I help you today?", "bot");
+  addMessage("Hello! \nHow can I help you today?", "bot");
 };
 
 ws.onmessage = (event) => {
