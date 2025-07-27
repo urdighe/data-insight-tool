@@ -119,8 +119,12 @@ class DataBot:
         return response
 
     @tracer.tool
-    def _call_tool(self, session, tool_name, tool_args):
-        return session.call_tool(tool_name, arguments=tool_args)
+    async def _call_tool(self, session, tool_name, tool_args):
+        try:
+            return await session.call_tool(tool_name, arguments=tool_args)
+        except Exception as e:
+            logging.error(f"Tool call failed for {tool_name}: {e}")
+            return {"error": f"Tool call failed: {str(e)}"}
 
     @tracer.chain(name="process_query")
     async def process_query(self, query):
@@ -146,6 +150,17 @@ class DataBot:
 
                     session = self.tool_to_session[tool_name]
                     result = await self._call_tool(session, tool_name, tool_args)
+
+                    # Handle both successful results and errors
+                    if isinstance(result, dict) and "error" in result:
+                        content = result["error"]
+                    else:
+                        content = (
+                            result.content
+                            if hasattr(result, "content")
+                            else str(result)
+                        )
+
                     messages.append(
                         {
                             "role": "user",
@@ -153,7 +168,7 @@ class DataBot:
                                 {
                                     "type": "tool_result",
                                     "tool_use_id": tool_id,
-                                    "content": result.content,
+                                    "content": content,
                                 }
                             ],
                         }
