@@ -96,9 +96,15 @@ class DataBot:
         )
         with tracer.start_span("llm_call", openinference_span_kind="llm") as span:
             prompt = messages[-1]["content"]
-            completion = response.content[0].text
-            span.set_attribute("llm.input", prompt)
-            span.set_attribute("llm.output", completion)
+            completion = response.content[0]
+
+            if completion.type == "text":
+                span.set_attribute("llm.input", prompt)
+                span.set_attribute("llm.output", completion.text)
+            elif completion.type == "tool_use":
+                span.set_attribute("llm.output", f"Tool call: {completion.name}")
+                span.set_attribute("llm.tool_name", completion.name)
+                span.set_attribute("llm.tool_args", str(completion.input))
 
             prompt_tokens = getattr(response.usage, "input_tokens", None)
             completion_tokens = getattr(response.usage, "output_tokens", None)
@@ -113,8 +119,12 @@ class DataBot:
         return response
 
     @tracer.tool
-    def _call_tool(self, session, tool_name, tool_args):
-        return session.call_tool(tool_name, arguments=tool_args)
+    async def _call_tool(self, session, tool_name, tool_args):
+        try:
+            return await session.call_tool(tool_name, arguments=tool_args)
+        except Exception as e:
+            logging.error(f"Tool call failed for {tool_name}: {e}")
+            return {"error": f"Tool call failed: {str(e)}"}
 
     @tracer.chain(name="process_query")
     async def process_query(self, query):
@@ -140,6 +150,17 @@ class DataBot:
 
                     session = self.tool_to_session[tool_name]
                     result = await self._call_tool(session, tool_name, tool_args)
+
+                    # Handle both successful results and errors
+                    if isinstance(result, dict) and "error" in result:
+                        content = result["error"]
+                    else:
+                        content = (
+                            result.content
+                            if hasattr(result, "content")
+                            else str(result)
+                        )
+
                     messages.append(
                         {
                             "role": "user",
@@ -147,7 +168,7 @@ class DataBot:
                                 {
                                     "type": "tool_result",
                                     "tool_use_id": tool_id,
-                                    "content": result.content,
+                                    "content": content,
                                 }
                             ],
                         }

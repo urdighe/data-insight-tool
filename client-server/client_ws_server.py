@@ -26,5 +26,6 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.send_text(response or "")
     except WebSocketDisconnect:
         logging.info("Client disconnected")
-    finally:
-        await chatbot.cleanup()
+    except Exception as e:
+        logging.error(f"WebSocket error: {e}")
+        await websocket.send_text(f"Error: {str(e)}")
